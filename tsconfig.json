@@ -1,0 +1,42 @@
+{
+    "compilerOptions" : {
+        "experimentalDecorators"    : true,
+
+        "noImplicitThis"            : true,
+        "strictBindCallApply"       : true,
+
+        "jsx"                       : "react",
+        "jsxFactory"                : "TextJSX.createElement",
+        "jsxFragmentFactory"        : "TextJSX.Fragment",
+
+        "target"                    : "es2017",
+        "sourceMap"                 : false,
+
+        "lib"                       : [
+            "esnext",
+            "dom"
+        ],
+
+        "module"                    : "esnext",
+        "moduleResolution"          : "node",
+
+        "allowSyntheticDefaultImports"    : true,
+
+        // people enabling strict mode and then writing code like this:
+        //     this.myStrictProp! = 'value'
+        //     if (this.myStrictProp! === 'value') {}
+        // please stop thinking you actually have any type-safety in your code
+        // skipping the unwrap from `undefined` value, is the same as
+        // using `strict : false`
+        // be honest with yourself
+        "strict"                    : false
+    },
+
+    "include" : [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+    ],
+
+    "exclude" : [
+    ]
+}
