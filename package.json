@@ -1,0 +1,23 @@
+{
+    "name": "chronograph-jsx",
+    "version": "0.0.0",
+    "description": "JSX runtime for fine-grained DOM updates, using ChronoGraph reactivity",
+    "type": "module",
+    "homepage": "https://github.com/canonic-epicure/chronograph-jsx",
+    "bugs": "https://github.com/canonic-epicure/chronograph-jsx/issues",
+    "repository": "git@github.com:canonic-epicure/chronograph-jsx.git",
+    "keywords": [
+        "jsx",
+        "chronograph",
+        "fine-grained",
+        "dom",
+        "updates",
+        "reactivity"
+    ],
+    "author": "Nickolay Platonov",
+    "license": "MIT",
+    "dependencies": {},
+    "devDependencies": {
+        "typescript": "^4.3.2"
+    }
+}
