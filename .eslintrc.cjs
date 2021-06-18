@@ -13,7 +13,7 @@ module.exports = {
         quotes                  : [ 'warn', 'single' ],
         'unicode-bom'           : [ 'error', 'never' ],
         'comma-spacing'         : [ 'error', { before : false, after : true } ],
-        'array-bracket-spacing' : [ 'warn', 'always' ],
+        'array-bracket-spacing' : [ 'warn', 'always', { 'singleValue' : true } ],
         'object-curly-spacing'  : [ 'warn', 'always' ],
         'key-spacing'           : [ 'warn',
             {
