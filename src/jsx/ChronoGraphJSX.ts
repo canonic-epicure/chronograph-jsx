@@ -1,9 +1,8 @@
-import { CalculationFunction, CalculationModeSync } from "../../node_modules/@bryntum/chronograph/src/chrono2/CalculationMode.js"
-import { globalGraph } from "../../node_modules/@bryntum/chronograph/src/chrono2/graph/Graph.js"
-import { CalculableBox, CalculableBoxUnbound } from "../../node_modules/@bryntum/chronograph/src/chrono2/data/CalculableBox.js"
-import { Box, BoxUnbound } from "../../node_modules/@bryntum/chronograph/src/chrono2/data/Box.js"
-import { Base } from "../class/Base.js"
-import { isArray, isFunction, isNumber, isString, isSyncFunction } from "../util/Typeguards.js"
+import { CalculationFunction, CalculationModeSync } from '../../node_modules/@bryntum/chronograph/src/chrono2/CalculationMode.js'
+import { BoxUnbound } from '../../node_modules/@bryntum/chronograph/src/chrono2/data/Box.js'
+import { CalculableBoxUnbound } from '../../node_modules/@bryntum/chronograph/src/chrono2/data/CalculableBox.js'
+import { globalGraph } from '../../node_modules/@bryntum/chronograph/src/chrono2/graph/Graph.js'
+import { isArray, isNumber, isString, isSyncFunction } from '../util/Typeguards.js'
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -60,6 +59,7 @@ export class ElementReactivity extends CalculableBoxUnbound {
         return boxes
     }
 
+
     static from<T extends typeof ElementReactivity> (this : T, element : Element, attributes : Record<string, AttributeSource>, ...children : ElementSource[]) : InstanceType<T> {
         const reactivity        = new this() as InstanceType<T>
 
@@ -74,9 +74,7 @@ export class ElementReactivity extends CalculableBoxUnbound {
         reactivity.calculation  = () => {
             attributeEffects.forEach(effect => effect.read())
 
-            while (element.childNodes.length > 0) element.childNodes[ 0 ].remove()
-
-            element.append(...childNodesList.read())
+            reconcileChildNodes(element, childNodesList.read())
         }
 
         return reactivity
@@ -89,9 +87,9 @@ export class NodesListReactivity extends CalculableBoxUnbound<Node[]> {
     normalizedSources   : (Node | CalculableBoxUnbound<ElementSource>)[]       = undefined
 
 
-    get calculation () : CalculationFunction<Node[], CalculationModeSync> {
-        return () => this.normalizedSources.flatMap(source => this.resolveElementSource(source))
-    }
+    $calculation        : CalculationFunction<Node[], CalculationModeSync> =
+        () => this.normalizedSources.flatMap(source => this.resolveElementSource(source))
+
 
     resolveElementSource (source : ElementSource) : Node[] {
         if (source instanceof Node) {
@@ -258,5 +256,111 @@ declare global {
         // interface ElementChildrenAttribute {
         //     childNodes
         // }
+    }
+}
+
+
+// Slightly modified version of: https://github.com/ryansolid/dom-expressions/blob/main/packages/dom-expressions/src/reconcile.js
+export function reconcileChildNodes (parentNode : Element, newNodes : Node[]) {
+    const prevNodes     = parentNode.childNodes
+
+    const bLength       = newNodes.length
+
+    let aEnd            = prevNodes.length
+    let bEnd            = bLength
+    let aStart          = 0
+    let bStart          = 0
+
+    if (aEnd === 0 || bEnd === 0) {
+        // @ts-ignore
+        parentNode.replaceChildren(...newNodes)
+
+        return
+    }
+
+    const after         = prevNodes[ aEnd - 1 ].nextSibling
+
+    let map : Map<Node, number>     = null
+
+    while (aStart < aEnd || bStart < bEnd) {
+        // common prefix
+        while (prevNodes[ aStart ] === newNodes[ bStart ]) {
+            aStart++
+            bStart++
+            if (aStart >= aEnd && bStart >= bEnd) return
+        }
+
+        // common suffix
+        while (prevNodes[ aEnd - 1 ] === newNodes[ bEnd - 1 ]) {
+            aEnd--
+            bEnd--
+            if (aStart >= aEnd && bStart >= bEnd) return
+        }
+
+        // append
+        if (aEnd === aStart) {
+            const node = bEnd < bLength
+                ?
+                    bStart
+                        ? newNodes[ bStart - 1 ].nextSibling
+                        : newNodes[ bEnd - bStart ]
+                :
+                    after
+
+            while (bStart < bEnd) parentNode.insertBefore(newNodes[ bStart++ ], node)
+        }
+        // remove
+        else if (bEnd === bStart) {
+            while (aStart < aEnd) {
+                if (!map || !map.has(prevNodes[ aStart ])) parentNode.removeChild(prevNodes[ aStart ])
+                aStart++
+            }
+        }
+        // swap backward
+        else if (prevNodes[ aStart ] === newNodes[ bEnd - 1 ] && newNodes[ bStart ] === prevNodes[ aEnd - 1 ]) {
+            const node          = prevNodes[ --aEnd ].nextSibling
+
+            parentNode.insertBefore(newNodes[ bStart++ ], prevNodes[ aStart++ ].nextSibling)
+            parentNode.insertBefore(newNodes[ --bEnd ], node)
+
+            // @ts-ignore
+            prevNodes[ aEnd ]   = newNodes[ bEnd ]
+        }
+        // fallback to map
+        else {
+            if (!map) {
+                map         = new Map()
+                let i       = bStart
+
+                while (i < bEnd) map.set(newNodes[ i ], i++)
+            }
+
+            const index     = map.get(prevNodes[ aStart ])
+
+            if (index !== undefined) {
+                if (bStart < index && index < bEnd) {
+                    let i           = aStart
+                    let sequence    = 1
+
+                    while (++i < aEnd && i < bEnd) {
+                        const t     = map.get(prevNodes[ i ])
+
+                        if (t == null || t !== index + sequence) break
+
+                        sequence++
+                    }
+
+                    if (sequence > index - bStart) {
+                        const node = prevNodes[ aStart ]
+
+                        // ??? multiple `insertBefore` calls with the same node?
+                        while (bStart < index) parentNode.insertBefore(newNodes[ bStart++ ], node)
+                    } else
+                        parentNode.replaceChild(newNodes[ bStart++ ], prevNodes[ aStart++ ])
+                } else
+                    aStart++
+            } else
+                parentNode.removeChild(prevNodes[ aStart++ ])
+        }
     }
 }
