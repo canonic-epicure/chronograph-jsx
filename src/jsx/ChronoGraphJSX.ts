@@ -79,7 +79,11 @@ export class ElementReactivity extends CalculableBox {
             const childNodes    = childNodesList.read()
 
             childNodes.forEach((childNode : ReactiveNode) => {
-                if (childNode.reactivity) childNode.reactivity.persistent = false
+                if (childNode.reactivity) {
+                    childNode.reactivity.persistent = false
+
+                    childNode.reactivity.read()
+                }
             })
 
             reconcileChildNodes(element, childNodes)

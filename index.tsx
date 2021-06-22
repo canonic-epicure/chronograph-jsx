@@ -5,7 +5,11 @@ import { field } from "@bryntum/chronograph/src/replica2/Entity.js"
 import { ChronoGraphJSX, ElementSource, NodesListReactivity } from "./src/jsx/ChronoGraphJSX.js"
 import { tag, WebComponent } from "./src/jsx/WebComponent.js"
 
-globalGraph.autoCommit = true
+globalGraph.autoCommit      = true
+// globalGraph.historyLimit    = 0
+
+// @ts-ignore
+window.globalGraph = globalGraph
 
 await new Promise(resolve => window.addEventListener('load', resolve))
 
