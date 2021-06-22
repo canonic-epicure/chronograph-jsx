@@ -1,4 +1,4 @@
-import { AnyFunction } from "../class/Mixin.js"
+import { AnyFunction } from "@bryntum/chronograph/src/class/Mixin.js"
 import { typeOf } from "./Helpers.js"
 
 //---------------------------------------------------------------------------------------------------------------------

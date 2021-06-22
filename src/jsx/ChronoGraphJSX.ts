@@ -1,12 +1,12 @@
-import { CalculationFunction, CalculationModeSync } from '../../node_modules/@bryntum/chronograph/src/chrono2/CalculationMode.js'
-import { BoxUnbound } from '../../node_modules/@bryntum/chronograph/src/chrono2/data/Box.js'
-import { CalculableBoxUnbound } from '../../node_modules/@bryntum/chronograph/src/chrono2/data/CalculableBox.js'
-import { globalGraph } from '../../node_modules/@bryntum/chronograph/src/chrono2/graph/Graph.js'
+import { CalculationFunction, CalculationModeSync } from '@bryntum/chronograph/src/chrono2/CalculationMode.js'
+import { BoxUnbound } from '@bryntum/chronograph/src/chrono2/data/Box.js'
+import { CalculableBox, CalculableBoxUnbound } from '@bryntum/chronograph/src/chrono2/data/CalculableBox.js'
+import { globalGraph } from '@bryntum/chronograph/src/chrono2/graph/Graph.js'
 import { isArray, isNumber, isString, isSyncFunction } from '../util/Typeguards.js'
 
 
 //---------------------------------------------------------------------------------------------------------------------
-export class ElementReactivity extends CalculableBoxUnbound {
+export class ElementReactivity extends CalculableBox {
     lazy        : boolean       = false
 
     element     : Element       = undefined
@@ -26,7 +26,8 @@ export class ElementReactivity extends CalculableBoxUnbound {
         while (!isString(source)) {
             if (source instanceof BoxUnbound) {
                 source  = source.read()
-            } else if (isSyncFunction(source)) {
+            }
+            else if (isSyncFunction(source)) {
                 source  = source()
             }
         }
@@ -43,14 +44,14 @@ export class ElementReactivity extends CalculableBoxUnbound {
                 this.setAttribute(name, source)
             }
             else {
-                const box = new CalculableBoxUnbound({
+                const box = CalculableBox.new({
                     persistent  : true,
                     lazy        : false,
                     calculation : () => {
                         this.setAttribute(name, this.resolveAttributeSource(source))
                     }
                 })
-                globalGraph.addAtom(box)
+                // globalGraph.addAtom(box)
 
                 boxes.push(box)
             }
@@ -61,7 +62,8 @@ export class ElementReactivity extends CalculableBoxUnbound {
 
 
     static from<T extends typeof ElementReactivity> (this : T, element : Element, attributes : Record<string, AttributeSource>, ...children : ElementSource[]) : InstanceType<T> {
-        const reactivity        = new this() as InstanceType<T>
+        // @ts-ignore
+        const reactivity        = this.new() as InstanceType<T>
 
         reactivity.element      = element
 
@@ -69,19 +71,31 @@ export class ElementReactivity extends CalculableBoxUnbound {
 
         const childNodesList    = NodesListReactivity.from(children)
 
-        globalGraph.addAtom(childNodesList)
+        // globalGraph.addAtom(childNodesList)
 
         reactivity.calculation  = () => {
             attributeEffects.forEach(effect => effect.read())
 
-            reconcileChildNodes(element, childNodesList.read())
+            const childNodes    = childNodesList.read()
+
+            childNodes.forEach((childNode : ReactiveNode) => {
+                if (childNode.reactivity) childNode.reactivity.persistent = false
+            })
+
+            reconcileChildNodes(element, childNodes)
         }
 
         return reactivity
     }
 }
 
-export class NodesListReactivity extends CalculableBoxUnbound<Node[]> {
+
+export interface ReactiveNode extends Node {
+    reactivity      : CalculableBoxUnbound
+}
+
+
+export class NodesListReactivity extends CalculableBox<Node[]> {
     lazy                : boolean                               = false
 
     normalizedSources   : (Node | CalculableBoxUnbound<ElementSource>)[]       = undefined
@@ -133,12 +147,12 @@ export class NodesListReactivity extends CalculableBoxUnbound<Node[]> {
             return source.flatMap(this.normalizeElementSource, this)
         }
         else if (isSyncFunction(source)) {
-            const box = new CalculableBoxUnbound({
+            const box = CalculableBox.new({
                 persistent  : true,
                 lazy        : false,
                 calculation : () => this.resolveElementSource(source)
             })
-            globalGraph.addAtom(box)
+            // globalGraph.addAtom(box)
 
             return [ box ]
         }
@@ -149,7 +163,8 @@ export class NodesListReactivity extends CalculableBoxUnbound<Node[]> {
 
 
     static from<T extends typeof NodesListReactivity> (this : T, source : ElementSource) : InstanceType<T> {
-        const instance              = new this() as InstanceType<T>
+        // @ts-ignore
+        const instance              = this.new() as InstanceType<T>
 
         instance.normalizedSources  = instance.normalizeElementSource(source)
 
@@ -199,7 +214,7 @@ export namespace ChronoGraphJSX {
 
             const reactivity    = ElementReactivity.from(element, attributes, ...children)
 
-            globalGraph.addAtom(reactivity)
+            // globalGraph.addAtom(reactivity)
 
             // @ts-ignore
             element.reactivity  = reactivity
@@ -212,27 +227,13 @@ export namespace ChronoGraphJSX {
         else if (tagName === FragmentSymbol) {
             const childNodesList    = NodesListReactivity.from(children)
 
-            globalGraph.addAtom(childNodesList)
+            // globalGraph.addAtom(childNodesList)
 
             return childNodesList
         }
         else if (isSyncFunction(tagName)) {
-
+            return
         }
-        //     return XmlElement.new({
-        //         tagName     : tagName,
-        //         attributes  : attributes,
-        //         childNodes  : normalizeXmlStream(children)
-        //     })
-        // }
-        // else {
-        //     return tagName.new({
-        //         attributes  : attributes,
-        //         childNodes  : normalizeXmlStream(children)
-        //     })
-        // }
-
-        return
     }
 }
 
